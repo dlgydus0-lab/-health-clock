@@ -8,14 +8,23 @@ st.set_page_config(
 
 st.title("⏰ 시간대별 맞춤 건강 & 인생 시계")
 st.write(
-    "파이썬으로 만든 나만의 스마트 인생/건강 시계입니다. 내 정보를"
+    "파이썬으로 만든 나만의 스마트 인생/건강 시계입니다. 내 출생 정보를"
     " 입력해보세요!"
 )
 
-# 2. 사이드바 - 사용자 정보 입력 받기 (나이 및 건강 기록)
-st.sidebar.header("👤 나의 기본 정보")
+# 2. 사이드바 - 사용자 출생 정보 및 건강 기록 입력 받기
+st.sidebar.header("👤 나의 출생 정보")
 birth_year = st.sidebar.number_input(
-    "태어난 연도 (출생년도)", min_value=1940, max_value=2020, value=2003
+    "태어난 연도 (출생년도)", min_value=1940, max_value=2025, value=2007
+)
+birth_month = st.sidebar.number_input(
+    "태어난 월", min_value=1, max_value=12, value=12
+)
+birth_day = st.sidebar.number_input(
+    "태어난 일", min_value=1, max_value=31, value=14
+)
+birth_hour = st.sidebar.number_input(
+    "태어난 시간 (시, 24시 기준)", min_value=0, max_value=23, value=12
 )
 
 st.sidebar.header("📝 오늘의 건강 기록")
@@ -39,32 +48,51 @@ current_time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
 
 st.markdown(f"**현재 한국 시각 (KST):** `{current_time_str}`")
 
-# 4. 인생 및 건강 나이 계산 로직
-current_year = kst_now.year
-my_age = current_year - birth_year
+# 4. 출생 시각 및 나이, 살아온 시간 계산
+birth_datetime = datetime(
+    birth_year, birth_month, birth_day, birth_hour, 12
+)  # 분은 12분 설정 반영
+time_lived = kst_now - birth_datetime
+days_lived = time_lived.days
+hours_lived = int(time_lived.total_seconds() // 3600)
 
-# 한국인 기준 통계 설정
-avg_life_expectancy = 83  # 평균 기대수명 (세)
-avg_healthy_age = 73  # 건강수명 (세) - 질병 없이 활동하는 나이
+# 만 나이 계산
+current_age = current_year - birth_year
+if (kst_now.month, kst_now.day) < (birth_month, birth_day):
+  current_age -= 1
 
-# 남은 연도 계산
-remaining_years = max(0, avg_life_expectancy - my_age)
-remaining_healthy_years = max(0, avg_healthy_age - my_age)
+# 5. 기대수명(83세) 및 건강수명(73세) 기준 남은 시간 계산
+avg_life_expectancy = 83  # 기대수명
+avg_healthy_age = 73  # 건강수명
 
-# 남은 인생의 총 주말 수 계산 (남은 연도 * 52주)
-estimated_remaining_weekends = remaining_years * 52
-
-# 5. 화면에 시각화 카드 표시
-st.markdown(
-    f"### ⏳ 나의 인생 시계 (현재 나이: 만 {my_age}세 / 기대수명"
-    f" {avg_life_expectancy}세 기준)"
+# 83세가 되는 생일 날짜
+death_target_date = datetime(
+    birth_year + avg_life_expectancy, birth_month, birth_day, birth_hour, 12
 )
+remaining_time = death_target_date - kst_now
+remaining_days_total = max(0, remaining_time.days)
+remaining_weeks_total = remaining_days_total // 7
+
+# 건강수명까지 남은 연도
+remaining_healthy_years = max(0, avg_healthy_age - current_age)
+
+# 6. 화면에 결과 표시 (살아온 시간 + 남은 주말)
+st.markdown(f"### ⏳ 나의 인생 시계 (현재 만 {current_age}세)")
+
+col_a, col_b = st.columns(2)
+with col_a:
+  st.metric(label="👶 내가 태어난 지", value=f"{days_lived:,}일째")
+with col_b:
+  st.metric(label="⏰ 살아온 시간", value=f"{hours_lived:,}시간째")
+
+st.markdown("---")
 
 col1, col2 = st.columns(2)
 with col1:
   st.metric(
-      label="🏖️ 내 인생 남은 주말 (평생)",
-      value=f"약 {estimated_remaining_weekends:,}주",
+      label="🏖️ 평생 남은 주말 수",
+      value=f"약 {remaining_weeks_total:,}주",
+      delta=f"총 {remaining_days_total:,}일 남음",
   )
 with col2:
   st.metric(
@@ -72,20 +100,14 @@ with col2:
       value=f"약 {remaining_healthy_years}년",
   )
 
-if my_age >= avg_healthy_age:
-  st.warning(
-      "⚠️️ 현재 건강수명(73세) 단계를 지나셨습니다! 지금부터의 꾸준한 건강"
-      " 관리가 더더욱 중요합니다."
-  )
-else:
-  st.info(
-      f"💡 **메시지:** 건강수명(73세)까지 앞으로 **{remaining_healthy_years}년"
-      " (약 {remaining_healthy_years * 365}일)** 남았습니다. 오늘부터"
-      " 시작하는 작은 운동과 물 한 잔이 건강한 노후를 만듭니다!"
-  )
+st.info(
+    f"💡 **인생 시계 인사이트:** 1주일은 7일이므로, 앞으로 남은 주말은 **약"
+    f" {remaining_weeks_total:,}주 (총 {remaining_days_total:,}일)**입니다."
+    " 주말이라는 소중한 단위로 시간을 아껴 쓰고 건강을 챙겨보세요!"
+)
 
 
-# 6. 시간대 판별 및 맞춤 코칭 로직
+# 7. 시간대 판별 및 맞춤 코칭 로직
 def get_time_zone(hour):
   if 6 <= hour < 12:
     return "아침 ☀️"
@@ -100,7 +122,7 @@ def get_time_zone(hour):
 time_zone = get_time_zone(current_hour)
 st.subheader(f"지금은 하루 중 **{time_zone}**입니다.")
 
-# 7. 건강 상태 피드백 및 미션 추천
+# 8. 건강 상태 피드백 및 미션 추천
 st.markdown("### 🎯 지금 나에게 필요한 건강 코칭")
 
 if sleep_hours < 6:
@@ -131,7 +153,7 @@ elif water_cups < 8:
 else:
   st.success("🎉 **목표 달성:** 오늘 충분한 수분을 섭취하셨습니다!")
 
-# 시간대별 맞춤 조언
+# 시간대별 맞춤 가이드
 st.markdown("### 🧭 시간대별 맞춤 생활 가이드")
 if time_zone == "아침 ☀️":
   st.write(
