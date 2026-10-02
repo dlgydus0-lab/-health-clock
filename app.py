@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import streamlit as st
 
 # 1. 웹 페이지 기본 설정
@@ -7,7 +7,9 @@ st.set_page_config(
 )
 
 st.title("⏰ 시간대별 맞춤 건강 & 생활 습관 코치")
-st.write("파이썬으로 만든 나만의 스마트 건강 시계입니다. 오늘의 컨디션을 입력해보세요!")
+st.write(
+    "파이썬으로 만든 나만의 스마트 건강 시계입니다. 오늘의 컨디션을 입력해보세요!"
+)
 
 # 2. 사이드바 - 사용자 정보 입력 받기
 st.sidebar.header("📝 오늘의 건강 기록")
@@ -20,16 +22,21 @@ water_cups = st.sidebar.slider(
 did_exercise = st.sidebar.checkbox("오늘 운동 완료함! 💪")
 
 st.sidebar.markdown("---")
+if st.sidebar.button("🔄 시간 및 화면 새로고침"):
+  st.rerun()
+
 st.sidebar.info(
-    "💡 팁: 아이폰 사파리에서 '홈 화면에 추가'를 하시면 앱처럼 쓸 수 있어요!"
+    "💡 팁: 시간이 안 맞을 땐 위에 '새로고침' 버튼을 누르면 한국 현재"
+    " 시각으로 즉시 갱신돼요!"
 )
 
-# 3. 현재 시간 가져오기
-now = datetime.now()
-current_hour = now.hour
-current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+# 3. 한국 표준시(KST, UTC+9) 현재 시간 정확히 가져오기
+utc_now = datetime.utcnow()
+kst_now = utc_now + timedelta(hours=9)
+current_hour = kst_now.hour
+current_time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown(f"**현재 접속 시각:** `{current_time_str}`")
+st.markdown(f"**현재 한국 시각 (KST):** `{current_time_str}`")
 
 
 # 4. 시간대 판별 및 맞춤 코칭 로직 (if 조건문 활용)
@@ -88,7 +95,7 @@ if time_zone == "아침 ☀️":
       "- 가벼운 기지개와 스트레칭으로 하루를 시작하세요.\n- 아침 공복에 물"
       " 한 잔은 신진대사에 아주 좋습니다."
   )
-elif time_zone == "오후 🌤️️":
+elif time_zone == "오후 🌤️":
   if not did_exercise:
     st.write(
         "- 나른한 오후 시간입니다. 가벼운 산책이나 계단 오르기로 활력을"
