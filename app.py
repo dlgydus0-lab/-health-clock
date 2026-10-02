@@ -49,34 +49,51 @@ current_time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
 st.markdown(f"**현재 한국 시각 (KST):** `{current_time_str}`")
 
 # 4. 출생 시각 및 나이, 살아온 시간 계산
+current_year = kst_now.year
 birth_datetime = datetime(
-    birth_year, birth_month, birth_day, birth_hour, 12
-)  # 분은 12분 설정 반영
+    int(birth_year), int(birth_month), int(birth_day), int(birth_hour), 12
+)
 time_lived = kst_now - birth_datetime
 days_lived = time_lived.days
 hours_lived = int(time_lived.total_seconds() // 3600)
 
-# 만 나이 계산
-current_age = current_year - birth_year
-if (kst_now.month, kst_now.day) < (birth_month, birth_day):
+# 만 나이 정확히 계산
+current_age = current_year - int(birth_year)
+if (kst_now.month, kst_now.day) < (int(birth_month), int(birth_day)):
   current_age -= 1
 
-# 5. 기대수명(83세) 및 건강수명(73세) 기준 남은 시간 계산
+# 5. 기대수명(83세) 기준 남은 '진짜 토요일/일요일' 일수 계산
 avg_life_expectancy = 83  # 기대수명
-avg_healthy_age = 73  # 건강수명
-
-# 83세가 되는 생일 날짜
 death_target_date = datetime(
-    birth_year + avg_life_expectancy, birth_month, birth_day, birth_hour, 12
+    int(birth_year) + avg_life_expectancy,
+    int(birth_month),
+    int(birth_day),
+    int(birth_hour),
+    12,
 )
-remaining_time = death_target_date - kst_now
-remaining_days_total = max(0, remaining_time.days)
-remaining_weeks_total = remaining_days_total // 7
 
-# 건강수명까지 남은 연도
+
+# 오늘부터 사망 시점까지 하루씩 넘어가며 토요일(5), 일요일(6) 카운트
+def count_exact_weekend_days(start_dt, end_dt):
+  weekend_days = 0
+  current = start_dt
+  while current <= end_dt:
+    # weekday(): 월(0)~금(4), 토(5), 일(6)
+    if current.weekday() in [5, 6]:
+      weekend_days += 1
+    current += timedelta(days=1)
+  return weekend_days
+
+
+# 계산 실행 (오늘부터 기대수명까지)
+total_remaining_weekend_days = count_exact_weekend_days(kst_now, death_target_date)
+# 주말(토,일)의 '주(Week)' 수로 보려면 총 주말 일수를 2로 나눔
+total_remaining_weekend_weeks = total_remaining_weekend_days // 2
+
+avg_healthy_age = 73
 remaining_healthy_years = max(0, avg_healthy_age - current_age)
 
-# 6. 화면에 결과 표시 (살아온 시간 + 남은 주말)
+# 6. 화면에 결과 표시
 st.markdown(f"### ⏳ 나의 인생 시계 (현재 만 {current_age}세)")
 
 col_a, col_b = st.columns(2)
@@ -90,9 +107,9 @@ st.markdown("---")
 col1, col2 = st.columns(2)
 with col1:
   st.metric(
-      label="🏖️ 평생 남은 주말 수",
-      value=f"약 {remaining_weeks_total:,}주",
-      delta=f"총 {remaining_days_total:,}일 남음",
+      label="🏖️ 평생 남은 진짜 주말",
+      value=f"약 {total_remaining_weekend_weeks:,}주",
+      delta=f"총 {total_remaining_weekend_days:,}일 (토·일)",
   )
 with col2:
   st.metric(
@@ -101,9 +118,10 @@ with col2:
   )
 
 st.info(
-    f"💡 **인생 시계 인사이트:** 1주일은 7일이므로, 앞으로 남은 주말은 **약"
-    f" {remaining_weeks_total:,}주 (총 {remaining_days_total:,}일)**입니다."
-    " 주말이라는 소중한 단위로 시간을 아껴 쓰고 건강을 챙겨보세요!"
+    f"💡 **인생 시계 인사이트:** 기대수명 83세까지 앞으로 맞이할 **진짜 토요일과"
+    f" 일요일은 총 {total_remaining_weekend_days:,}일 (약"
+    f" {total_remaining_weekend_weeks:,}주)**입니다. 소중한 주말을 알차게"
+    " 보내세요!"
 )
 
 
