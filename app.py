@@ -6,14 +6,12 @@ utc_now = datetime.utcnow()
 kst_now = utc_now + timedelta(hours=9)
 current_hour = kst_now.hour
 current_time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
+today_date = kst_now.date()
 
-# 2. 낮과 밤에 따른 자동 다크/라이트 모드 테마 설정 (아기자기한 파스텔톤)
-# 낮(오전 6시 ~ 오후 8시): 크림 베이지 & 피치 톤 (라이트 모드)
-# 밤(오후 8시 ~ 오전 6시): 포근한 다크 네이비 톤 (다크 모드)
+# 2. 낮과 밤에 따른 자동 다크/라이트 모드 테마 설정
 is_night = current_hour < 6 or current_hour >= 20
 
 if is_night:
-  # 다크 모드 (밤/새벽) - 눈이 편안한 감성 스타일
   bg_color = "#1E1E2F"
   card_bg = "#2B2B40"
   text_color = "#F4F4F9"
@@ -21,7 +19,6 @@ if is_night:
   border_color = "#3E3E5C"
   mode_name = "다크 모드 🌙"
 else:
-  # 라이트 모드 (낮/아침/저녁) - 아기자기한 파스텔 크림/피치 톤
   bg_color = "#FFFBF7"
   card_bg = "#FFFFFF"
   text_color = "#2D3748"
@@ -29,7 +26,6 @@ else:
   border_color = "#FED7D7"
   mode_name = "라이트 모드 ☀️"
 
-# 웹 페이지 기본 설정 및 디자인 CSS 주입
 st.set_page_config(
     page_title="나의 스마트 인생 & 건강 시계", page_icon="⏰", layout="centered"
 )
@@ -41,10 +37,6 @@ st.markdown(
         background-color: {bg_color};
         color: {text_color};
     }}
-    .css-1104ytp, .css-6qob1r {{
-        background-color: {card_bg};
-    }}
-    /* 카드 디자인 스타일 */
     .custom-card {{
         background-color: {card_bg};
         border: 2px solid {border_color};
@@ -62,15 +54,14 @@ st.markdown(
 )
 
 # 헤더 타이틀
-st.title("나의 인생 시계")
+st.title("⏰ 나의 인생 시계")
 st.write(
     f"파이썬으로 만든 나만의 감성 시간 관리 앱입니다! (현재 테마: **{mode_name}**)"
 )
 
-# 3. 사이드바 - 사용자 정보 및 새로운 습관 루틴 입력
+# 3. 사이드바 설정
 st.sidebar.header("👤 나의 설정 및 루틴")
 
-# 출생 정보 (기본값: 2007년 12월 14일 12시 12분)
 with st.sidebar.expander("👶 출생 정보 수정", expanded=False):
   birth_year = st.number_input(
       "태어난 연도", min_value=1940, max_value=2025, value=2007
@@ -83,9 +74,7 @@ with st.sidebar.expander("👶 출생 정보 수정", expanded=False):
 
 st.sidebar.markdown("---")
 st.sidebar.header("🎯 오늘의 생활 루틴")
-# [신규] 아침 영양제 체크
 took_supplements = st.sidebar.checkbox("💊 아침 영양제 챙겨먹기 완료!")
-# [신규] 공부 시간 입력 (목표: 90분 이상)
 study_minutes = st.sidebar.slider(
     "📚 오늘 공부한 시간 (분)", min_value=0, max_value=300, value=60, step=10
 )
@@ -106,7 +95,7 @@ if st.sidebar.button("🔄 시간 및 화면 새로고침"):
 st.markdown(f"**현재 한국 시각 (KST):** `{current_time_str}`")
 st.markdown("---")
 
-# 4. 나이, 살아온 시간, 남은 주말 계산 로직
+# 4. 각종 시간/나이/주말/진행률 계산 로직
 current_year = kst_now.year
 birth_datetime = datetime(
     int(birth_year), int(birth_month), int(birth_day), int(birth_hour), 12
@@ -145,19 +134,46 @@ total_remaining_weekend_weeks = total_remaining_weekend_days // 2
 avg_healthy_age = 73
 remaining_healthy_years = max(0, avg_healthy_age - current_age)
 
-# 5. [파스텔톤 카드 UI 1] 인생 & 시간 시계
+# [신규] 올해의 진행률 (%) 계산
+start_of_year = datetime(current_year, 1, 1).date()
+end_of_year = datetime(current_year, 12, 31).date()
+total_days_in_year = (end_of_year - start_of_year).days + 1
+days_passed_in_year = (today_date - start_of_year).days
+year_progress_percent = min(
+    1.0, max(0.0, days_passed_in_year / total_days_in_year)
+)
+
+# [신규] 생일 D-day 계산
+next_birthday = datetime(current_year, int(birth_month), int(birth_day)).date()
+if today_date > next_birthday:
+  next_birthday = datetime(
+      current_year + 1, int(birth_month), int(birth_day)
+  ).date()
+d_day_birthday = (next_birthday - today_date).days
+
+
+# 5. [파스텔톤 카드 UI 1] 인생 & 시간 & 올해 진행률 시계
 st.markdown(
     f"""
     <div class="custom-card">
-        <h3>⏳ 나의 인생 시계 (만 {current_age}세)</h3>
-        <p>👶 내가 태어난 지 <b>{days_lived:,}일째</b> ({hours_lived:,}시간째 살아가는 중)</p>
+        <h3>⏳ 나의 인생 & 시간 시계 (만 {current_age}세)</h3>
+        <p>👶 내가 태어난 지 <b>{days_lived:,}일째</b> ({hours_lived:,}시간째)</p>
         <hr style="border: 0.5px solid {border_color};">
-        <p>🏖️ 기대수명 83세까지 남은 진짜 주말: <b>약 {total_remaining_weekend_weeks:,}주</b> (총 {total_remaining_weekend_days:,}일의 토·일)</p>
-        <p>💪 건강수명(73세)까지 남은 기간: <b>약 {remaining_healthy_years}년</b></p>
+        <p>🏖️ 기대수명 83세까지 남은 진짜 주말: <b>약 {total_remaining_weekend_weeks:,}주</b> (총 {total_remaining_weekend_days:,}일)</p>
+        <p>🎂 내 생일까지 남은 기간: <b>D-{d_day_birthday}일</b></p>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+# 올해 진행률 게이지 바 표시
+st.markdown(
+    f"📈 **올해({current_year}년) 진행률:** 전체의"
+    f" **{year_progress_percent * 100:.1f}%**가 지났습니다."
+)
+st.progress(year_progress_percent)
+
+st.markdown("---")
 
 # 6. [파스텔톤 카드 UI 2] 오늘의 루틴 체크 (공부 & 영양제)
 st.markdown("### 📋 오늘의 습관 & 루틴 체크")
@@ -170,7 +186,7 @@ with col_r1:
     st.warning("💊 **아침 영양제:** 아직 안 드셨다면 지금 챙겨드세요!")
 
 with col_r2:
-  study_goal = 90  # 1시간 30분 = 90분
+  study_goal = 90  # 90분
   if study_minutes >= study_goal:
     st.success(
         f"📚 **공부 목표:** {study_minutes}분 달성! (목표 90분 돌파 🎓)"
@@ -237,7 +253,7 @@ if time_zone == "아침 ☀️":
       "- 가벼운 기지개와 스트레칭으로 하루를 시작하세요.\n- 아침 공복에 물"
       " 한 잔과 영양제 섭취는 하루 활력을 책임집니다!"
   )
-elif time_zone == "오후 🌤️":
+elif time_zone == "오후 🌤️️":
   if not did_exercise:
     st.write(
         "- 나른한 오후 시간입니다. 공부 중간중간 스트레칭이나 산책을"
