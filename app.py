@@ -7,7 +7,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. 지하철 감성의 커스텀 CSS 디자인 적용
+# 2. 지하철 감성의 커스텀 CSS 디자인 적용 (모바일 가독성 최적화)
 st.markdown("""
     <style>
     .main {
@@ -18,16 +18,16 @@ st.markdown("""
     }
     .subway-header {
         background: linear-gradient(135deg, #1b365d, #2c3e50);
-        padding: 20px;
-        border-radius: 12px;
+        padding: 16px;
+        border-radius: 10px;
         color: white;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .card {
         background-color: white;
-        padding: 20px;
+        padding: 16px;
         border-radius: 10px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         margin-bottom: 15px;
@@ -37,21 +37,28 @@ st.markdown("""
         color: #0052A4;
         font-weight: bold;
     }
+    .seat-box {
+        background-color: #ffffff;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #e1e4e8;
+        font-family: monospace;
+        font-size: 13px;
+        line-height: 1.5;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # 상단 헤더 배너
 st.markdown("""
     <div class="subway-header">
-        <h2>🚇 지하철 착석 확률 추천기</h2>
-        <p style="margin: 0; font-size: 14px; color: #d0d7de;">지금, 어느 칸에 타야 앉을 수 있을까?</p>
+        <h3 style="margin:0; font-size:20px;">🚇 지하철 착석 가이드</h3>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #d0d7de;">지금, 어느 칸에 타야 앉을 수 있을까?</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 3. 사용자 입력 섹션
-st.markdown("### 📍 운행 정보 선택")
+# 3. 사용자 입력 섹션 (컴팩트하게 배치)
 col1, col2 = st.columns(2)
-
 with col1:
     line_choice = st.selectbox("노선 선택", ["2호선 (순환)", "1호선", "3호선", "4호선"])
 with col2:
@@ -59,69 +66,91 @@ with col2:
 
 station_choice = st.selectbox(
     "현재 탑승할 역", 
-    ["강남역", "역삼역", "선릉역", "교대역", "사당역", "서울역", "홍대입구역"]
+    ["강남역", "역삼역", "선릉역", "교대역", "사당역", "서울역", "홍대입구역", "신도림역"]
 )
 
 st.markdown("---")
 
-# 4. 확률 및 추천 계산 로직
+# 4. 확률 및 추천 계산 로직 (과제용 예시 데이터)
 def get_recommendation(station):
-    if station in ["강남역", "교대역", "홍대입구역"]:
+    if station in ["강남역", "교대역", "홍대입구역", "신도림역"]:
         best_car = "4호차"
         best_pos = "출입문 바로 앞 (오른쪽 문)"
-        score = 88
-        stars = "⭐⭐⭐⭐⭐"
-        reason = "환승 계단과 가까워 내리는 승객이 가장 많고, 출입문 앞은 회전율이 높아 착석 확률이 극대화됩니다."
+        stars = "★★★★★"
+        status = "매우 높음"
+        reasons = [
+            "출입문 주변은 환승 및 하차 승객이 발생할 가능성이 높은 위치입니다.",
+            "좌석이 비었을 때 곧바로 이동하기 편리한 통로 인근 위치입니다.",
+            "승객의 이동이 비교적 많아 좌석 회전율이 높은 구역입니다."
+        ]
     elif station in ["역삼역", "선릉역"]:
         best_car = "7호차"
         best_pos = "출입문 중앙"
-        score = 75
-        stars = "⭐⭐⭐⭐"
-        reason = "주변 회사원들의 하차 패턴이 뚜렷하여 중간 칸의 좌석 비움 확률이 높습니다."
+        stars = "★★★★☆"
+        status = "높음"
+        reasons = [
+            "주변 출퇴근 인구의 하차 패턴이 뚜렷한 중간 칸 위치입니다.",
+            "문과 문 사이의 좌석 비움 확률을 고려한 배치입니다."
+        ]
     else:
         best_car = "3호차"
         best_pos = "교통약자석 부근 일반석"
-        score = 65
-        stars = "⭐⭐⭐"
-        reason = "전체적으로 혼잡도가 평이하며, 출입문 옆자리가 비교적 빠르게 비는 구간입니다."
+        stars = "★★★☆☆"
+        status = "보통"
+        reasons = [
+            "전체적인 혼잡도가 평이하며 일반적인 회전율을 보이는 구간입니다."
+        ]
         
-    return best_car, best_pos, score, stars, reason
+    return best_car, best_pos, stars, status, reasons
 
-car, position, probability, star_rating, desc = get_recommendation(station_choice)
+car, position, star_rating, seat_status, reason_list = get_recommendation(station_choice)
 
-# 5. 결과 시각화 (카드 형태)
-st.markdown(f"### 🎯 **{station_choice}** 맞춤형 착석 가이드")
+# 5. 결과 시각화 (역 이름 동적 반영 및 카드 형태)
+st.markdown(f"### 🎯 **{station_choice} 착석 가이드**")
 
 st.markdown(f"""
     <div class="card">
-        <h3 style="margin-top:0; color:#1b365d;">🏆 추천 탑승 위치</h3>
-        <p>👉 <span class="highlight">{car}</span> / <span class="highlight">{position}</span></p>
-        <hr style="border:0; border-top:1px solid #eee;">
-        <p><b>예상 착석 확률:</b> {probability}% ({star_rating})</p>
-        <p><b>💡 추천 이유:</b> {desc}</p>
+        <h4 style="margin-top:0; color:#1b365d; font-size:16px;">🏆 추천 탑승 위치</h4>
+        <p style="margin: 8px 0;">👉 <span class="highlight">{car}</span> / <span class="highlight">{position}</span></p>
+        <hr style="border:0; border-top:1px solid #eee; margin: 10px 0;">
+        <p style="margin: 0;"><b>착석 가능성:</b> {star_rating} ({seat_status})</p>
     </div>
 """, unsafe_allow_html=True)
 
-# 6. 지하철 칸 내부 시각화 (st.code 함수로 안전하게 출력)
-st.markdown("### 💺 해당 칸 좌석 배치 및 추천 자리")
-st.info(f"💡 아래 그림에서 📌 표시가 가리키는 **{position}** 위치에 서 있는 것이 가장 유리합니다.")
+# 6. 직관적인 지하철 좌석 배치 시각화
+st.markdown("### 💺 지하철 칸 내부 추천 위치")
+st.markdown(f"<p style='font-size:13px; color:#555;'>💡 아래 배치도에서 <span style='color:#0052A4; font-weight:bold;'>📍 [추천 위치]</span>로 표시된 자리에 서 있는 것이 유리합니다.</p>", unsafe_allow_html=True)
 
-seat_text = """[ 문 (Door) ] 🚪  <--- 📌 [가장 추천하는 위치]
----------------------------------
-💺 좌석  💺 좌석  💺 좌석  💺 좌석
----------------------------------
-       [ 통로 / 서 있는 공간 ]
----------------------------------
-💺 좌석  💺 좌석  💺 좌석  💺 좌석
----------------------------------
-[ 문 (Door) ] 🚪"""
+seat_layout_html = f"""
+<div class="seat-box">
+🚪 [ 출입문 (Door) ]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;👇<br>
+<span style="color:#0052A4; font-weight:bold;">📍 [추천 위치: {position}]</span><br>
+------------------------------------<br>
+💺 좌석 &nbsp;&nbsp;&nbsp; 💺 좌석 &nbsp;&nbsp;&nbsp; 💺 좌석<br>
+------------------------------------<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🚶 [ 통로 공간 ]<br>
+------------------------------------<br>
+💺 좌석 &nbsp;&nbsp;&nbsp; 💺 좌석 &nbsp;&nbsp;&nbsp; 💺 좌석<br>
+------------------------------------<br>
+🚪 [ 출입문 (Door) ]
+</div>
+"""
+st.markdown(seat_layout_html, unsafe_allow_html=True)
 
-st.code(seat_text, language="text")
+# 7. 추천 이유 보기 (아코디언 형태 토글 기능)
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander("💡 추천 이유 자세히 보기"):
+    st.markdown(f"**[{station_choice} {car} 추천 근거]**")
+    for idx, reason in enumerate(reason_list, 1):
+        st.markdown(f"**{idx}.** {reason}")
+    st.markdown("<p style='font-size: 11px; color: #888; margin-top: 8px;'>※ 본 내용은 과제 수행을 위한 현장 관찰 및 시나리오 기반 가상 데이터입니다.</p>", unsafe_allow_html=True)
 
-# 7. 발표용 팁
-with st.expander("📌 교수님 발표 꿀팁 (클릭해서 확인)"):
-    st.markdown("""
-    * **관찰력 강조:** 교수님이 말씀하신 '출입문 바로 옆자리의 빠른 회전율'을 핵심 규칙으로 반영했습니다.
-    * **확률 모델:** 단순한 무작위가 아니라 역의 특성(환승역 여부, 계단 위치 가중치)에 따라 칸과 위치별 점수를 다르게 부여했습니다.
-    * **웹앱(PWA) 확장성:** 아이폰 사파리에서 '홈 화면에 추가'를 누르면 별도 앱 설치 없이 링크 하나로 즉시 테스트할 수 있습니다.
-    """)
+# 8. 하단 안내 문구 (작은 글씨)
+st.markdown("<br><hr style='border:0; border-top:1px solid #ddd;'>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align: center; font-size: 11px; color: #888;'>"
+    "※ 착석 가능성은 승객의 이동 상황에 따라 달라질 수 있습니다."
+    "</p>", 
+    unsafe_allow_html=True
+)
