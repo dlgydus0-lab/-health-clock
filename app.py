@@ -1,275 +1,124 @@
-from datetime import datetime, timedelta
 import streamlit as st
 
-# 1. 한국 표준시(KST, UTC+9) 현재 시간 정확히 가져오기
-utc_now = datetime.utcnow()
-kst_now = utc_now + timedelta(hours=9)
-current_hour = kst_now.hour
-current_time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
-today_date = kst_now.date()
-
-# 2. 낮과 밤에 따른 자동 다크/라이트 모드 테마 설정
-is_night = current_hour < 6 or current_hour >= 20
-
-if is_night:
-  bg_color = "#1E1E2F"
-  card_bg = "#2B2B40"
-  text_color = "#F4F4F9"
-  sub_text = "#B0B0C3"
-  border_color = "#3E3E5C"
-  mode_name = "다크 모드 🌙"
-else:
-  bg_color = "#FFFBF7"
-  card_bg = "#FFFFFF"
-  text_color = "#2D3748"
-  sub_text = "#718096"
-  border_color = "#FED7D7"
-  mode_name = "라이트 모드 ☀️"
-
+# 1. 페이지 설정 (모바일 최적화 및 타이틀)
 st.set_page_config(
-    page_title="나의 스마트 인생 & 건강 시계", page_icon="⏰", layout="centered"
+    page_title="지하철 착석 확률 추천기",
+    page_icon="🚇",
+    layout="centered"
 )
 
-st.markdown(
-    f"""
+# 2. 지하철 감성의 커스텀 CSS 디자인 적용
+# 다크 네이비 헤더와 회색빛 배경으로 지하철 느낌 연출
+st.markdown("""
     <style>
-    .stApp {{
-        background-color: {bg_color};
-        color: {text_color};
-    }}
-    .custom-card {{
-        background-color: {card_bg};
-        border: 2px solid {border_color};
+    .main {
+        background-color: #f4f6f8;
+    }
+    .stApp {
+        background-color: #f4f6f8;
+    }
+    .subway-header {
+        background: linear-gradient(135deg, #1b365d, #2c3e50);
         padding: 20px;
-        border-radius: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        color: white;
+        text-align: center;
         margin-bottom: 20px;
-    }}
-    h1, h2, h3, p, label {{
-        color: {text_color} !important;
-    }}
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+        border-left: 5px solid #0052A4; /* 2호선 블루 포인트 컬러 */
+    }
+    .highlight {
+        color: #0052A4;
+        font-weight: bold;
+    }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
-# 헤더 타이틀
-st.title("⏰ 나의 인생 시계")
-st.write(
-    f"파이썬으로 만든 나만의 감성 시간 관리 앱입니다! (현재 테마: **{mode_name}**)"
-)
-
-# 3. 사이드바 설정
-st.sidebar.header("👤 나의 설정 및 루틴")
-
-with st.sidebar.expander("👶 출생 정보 수정", expanded=False):
-  birth_year = st.number_input(
-      "태어난 연도", min_value=1940, max_value=2025, value=2007
-  )
-  birth_month = st.number_input("태어난 월", min_value=1, max_value=12, value=12)
-  birth_day = st.number_input("태어난 일", min_value=1, max_value=31, value=14)
-  birth_hour = st.sidebar.number_input(
-      "태어난 시간 (시)", min_value=0, max_value=23, value=12
-  )
-
-st.sidebar.markdown("---")
-st.sidebar.header("🎯 오늘의 생활 루틴")
-took_supplements = st.sidebar.checkbox("💊 아침 영양제 챙겨먹기 완료!")
-study_minutes = st.sidebar.slider(
-    "📚 오늘 공부한 시간 (분)", min_value=0, max_value=300, value=60, step=10
-)
-
-st.sidebar.markdown("---")
-st.sidebar.header("💧 건강 기록")
-sleep_hours = st.sidebar.number_input(
-    "어젯밤 수면 시간 (시간)", min_value=0.0, max_value=24.0, value=7.0, step=0.5
-)
-water_cups = st.sidebar.slider(
-    "오늘 마신 물 (컵, 1컵=250ml)", min_value=0, max_value=15, value=3
-)
-did_exercise = st.sidebar.checkbox("💪 오늘 운동 완료함!")
-
-if st.sidebar.button("🔄 시간 및 화면 새로고침"):
-  st.rerun()
-
-st.markdown(f"**현재 한국 시각 (KST):** `{current_time_str}`")
-st.markdown("---")
-
-# 4. 각종 시간/나이/주말/진행률 계산 로직
-current_year = kst_now.year
-birth_datetime = datetime(
-    int(birth_year), int(birth_month), int(birth_day), int(birth_hour), 12
-)
-time_lived = kst_now - birth_datetime
-days_lived = time_lived.days
-hours_lived = int(time_lived.total_seconds() // 3600)
-
-current_age = current_year - int(birth_year)
-if (kst_now.month, kst_now.day) < (int(birth_month), int(birth_day)):
-  current_age -= 1
-
-# 기대수명 83세 기준 진짜 주말 계산
-avg_life_expectancy = 83
-death_target_date = datetime(
-    int(birth_year) + avg_life_expectancy,
-    int(birth_month),
-    int(birth_day),
-    int(birth_hour),
-    12,
-)
-
-
-def count_exact_weekend_days(start_dt, end_dt):
-  weekend_days = 0
-  current = start_dt
-  while current <= end_dt:
-    if current.weekday() in [5, 6]:
-      weekend_days += 1
-    current += timedelta(days=1)
-  return weekend_days
-
-
-total_remaining_weekend_days = count_exact_weekend_days(kst_now, death_target_date)
-total_remaining_weekend_weeks = total_remaining_weekend_days // 2
-avg_healthy_age = 73
-remaining_healthy_years = max(0, avg_healthy_age - current_age)
-
-# [신규] 올해의 진행률 (%) 계산
-start_of_year = datetime(current_year, 1, 1).date()
-end_of_year = datetime(current_year, 12, 31).date()
-total_days_in_year = (end_of_year - start_of_year).days + 1
-days_passed_in_year = (today_date - start_of_year).days
-year_progress_percent = min(
-    1.0, max(0.0, days_passed_in_year / total_days_in_year)
-)
-
-# [신규] 생일 D-day 계산
-next_birthday = datetime(current_year, int(birth_month), int(birth_day)).date()
-if today_date > next_birthday:
-  next_birthday = datetime(
-      current_year + 1, int(birth_month), int(birth_day)
-  ).date()
-d_day_birthday = (next_birthday - today_date).days
-
-
-# 5. [파스텔톤 카드 UI 1] 인생 & 시간 & 올해 진행률 시계
-st.markdown(
-    f"""
-    <div class="custom-card">
-        <h3>⏳ 나의 인생 & 시간 시계 (만 {current_age}세)</h3>
-        <p>👶 내가 태어난 지 <b>{days_lived:,}일째</b> ({hours_lived:,}시간째)</p>
-        <hr style="border: 0.5px solid {border_color};">
-        <p>🏖️ 기대수명 83세까지 남은 진짜 주말: <b>약 {total_remaining_weekend_weeks:,}주</b> (총 {total_remaining_weekend_days:,}일)</p>
-        <p>🎂 내 생일까지 남은 기간: <b>D-{d_day_birthday}일</b></p>
+# 상단 헤더 배너
+st.markdown("""
+    <div class="subway-header">
+        <h2>🚇 지하철 착석 확률 추천기</h2>
+        <p style="margin: 0; font-size: 14px; color: #d0d7de;">지금, 어느 칸에 타야 앉을 수 있을까?</p>
     </div>
-    """,
-    unsafe_allow_html=True,
+""", unsafe_allow_html=True)
+
+# 3. 사용자 입력 섹션 (사이드바 또는 상단 카드)
+st.markdown("### 📍 운행 정보 선택")
+col1, col2 = st.columns(2)
+
+with col1:
+    line_choice = st.selectbox("노선 선택", ["2호선 (순환)", "1호선", "3호선", "4호선"])
+with col2:
+    direction_choice = st.selectbox("방향 선택", ["내선순환 / 상행", "외선순환 / 하행"])
+
+station_choice = st.selectbox(
+    "현재 탑승할 역", 
+    ["강남역", "역삼역", "선릉역", "교대역", "사당역", "서울역", "홍대입구역"]
 )
 
-# 올해 진행률 게이지 바 표시
-st.markdown(
-    f"📈 **올해({current_year}년) 진행률:** 전체의"
-    f" **{year_progress_percent * 100:.1f}%**가 지났습니다."
-)
-st.progress(year_progress_percent)
-
+# 구분선
 st.markdown("---")
 
-# 6. [파스텔톤 카드 UI 2] 오늘의 루틴 체크 (공부 & 영양제)
-st.markdown("### 📋 오늘의 습관 & 루틴 체크")
-col_r1, col_r2 = st.columns(2)
+# 4. 확률 및 추천 계산 로직 (1학년 수준의 규칙 기반 알고리즘)
+# 역과 위치에 따른 가상 데이터 시뮬레이션
+def get_recommendation(station):
+    # 환승역이거나 사람이 많은 주요 역 시뮬레이션
+    if station in ["강남역", "교대역", "홍대입구역"]:
+        best_car = "4호차"
+        best_pos = "출입문 바로 앞 (오른쪽 문)"
+        score = 88
+        stars = "⭐⭐⭐⭐⭐"
+        reason = "환승 계단과 가까워 내리는 승객이 가장 많고, 출입문 앞은 회전율이 높아 착석 확률이 극대화됩니다."
+    elif station in ["역삼역", "선릉역"]:
+        best_car = "7호차"
+        best_pos = "출입문 중앙"
+        score = 75
+        stars = "⭐⭐⭐⭐"
+        reason = "주변 회사원들의 하차 패턴이 뚜렷하여 중간 칸의 좌석 비움 확률이 높습니다."
+    else:
+        best_car = "3호차"
+        best_pos = "교통약자석 부근 일반석"
+        score = 65
+        stars = "⭐⭐⭐"
+        reason = "전체적으로 혼잡도가 평이하며, 출입문 옆자리가 비교적 빠르게 비는 구간입니다."
+        
+    return best_car, best_pos, score, stars, reason
 
-with col_r1:
-  if took_supplements:
-    st.success("💊 **아침 영양제:** 섭취 완료! 훌륭해요 ✨")
-  else:
-    st.warning("💊 **아침 영양제:** 아직 안 드셨다면 지금 챙겨드세요!")
+car, position, probability, star_rating, desc = get_recommendation(station_choice)
 
-with col_r2:
-  study_goal = 90  # 90분
-  if study_minutes >= study_goal:
-    st.success(
-        f"📚 **공부 목표:** {study_minutes}분 달성! (목표 90분 돌파 🎓)"
-    )
-  else:
-    st.info(
-        f"📚 **공부 목표:** 현재 {study_minutes}분 / 목표 90분 (조금만 더"
-        " 화이팅!)"
-    )
+# 5. 결과 시각화 (카드 형태)
+st.markdown(f"### 🎯 **{station_choice}** 맞춤형 착석 가이드")
 
-st.markdown("---")
+st.markdown(f"""
+    <div class="card">
+        <h3 style="margin-top:0; color:#1b365d;">🏆 추천 탑승 위치</h3>
+        <p>👉 <span class="highlight">{car}</span> / <span class="highlight">{position}</span></p>
+        <hr style="border:0; border-top:1px solid #eee;">
+        <p><b>예상 착석 확률:</b> {probability}% ({star_rating})</p>
+        <p><b>💡 추천 이유:</b> {desc}</p>
+    </div>
+""", unsafe_allow_html=True)
 
+# 6. 지하철 칸 내부 시각화 (좌석 배치도 느낌)
+st.markdown("### 💺 해당 칸 좌석 배치 및 추천 자리")
+st.info("💡 아래 그림에서 파란색 마커(📌)가 가리키는 위치에 서 있는 것이 가장 유리합니다.")
 
-# 7. 시간대 판별 및 맞춤 코칭 로직
-def get_time_zone(hour):
-  if 6 <= hour < 12:
-    return "아침 ☀️"
-  elif 12 <= hour < 17:
-    return "오후 🌤️"
-  elif 17 <= hour < 21:
-    return "저녁 🌙"
-  else:
-    return "밤/새벽 🌌"
-
-
-time_zone = get_time_zone(current_hour)
-st.subheader(f"지금은 하루 중 **{time_zone}**입니다.")
-
-# 8. 건강 상태 피드백 및 미션 추천
-st.markdown("### 🎯 맞춤형 건강 코칭")
-
-if sleep_hours < 6:
-  st.warning(
-      "⚠️ **수면 부족 경고:** 어제 잠을 너무 적게 주셨어요. 오늘은 낮에 15분"
-      " 정도 짧은 낮잠이나 휴식을 추천해요!"
-  )
-else:
-  st.success("✨ **수면 상태 양호:** 적절한 수면 시간을 유지하고 계시네요!")
-
-water_goal = 8
-water_progress = min(water_cups / water_goal, 1.0)
-st.write(
-    f"💧 **물 섭취량:** 목표 8컵 중 현재 **{water_cups}컵** 드셨습니다."
-)
-st.progress(water_progress)
-
-if water_cups < 4:
-  st.info(
-      "👉 **추천 행동:** 목이 마르지 않더라도 지금 책상 위에 물 한 잔을 떠다"
-      "두고 조금씩 마셔보세요."
-  )
-elif water_cups < 8:
-  st.info(
-      "👉 **추천 행동:** 아주 잘하고 있어요! 조금만 더 마시면 하루 목표를"
-      " 달성할 수 있습니다."
-  )
-else:
-  st.success("🎉 **목표 달성:** 오늘 충분한 수분을 섭취하셨습니다!")
-
-# 시간대별 맞춤 가이드
-st.markdown("### 🧭 시간대별 맞춤 생활 가이드")
-if time_zone == "아침 ☀️":
-  st.write(
-      "- 가벼운 기지개와 스트레칭으로 하루를 시작하세요.\n- 아침 공복에 물"
-      " 한 잔과 영양제 섭취는 하루 활력을 책임집니다!"
-  )
-elif time_zone == "오후 🌤️️":
-  if not did_exercise:
-    st.write(
-        "- 나른한 오후 시간입니다. 공부 중간중간 스트레칭이나 산책을"
-        " 곁들여보세요!"
-    )
-  else:
-    st.write(
-        "- 이미 운동을 완료하셨군요! 집중력이 흐트러질 때 심호흡을 해보세요."
-    )
-elif time_zone == "저녁 🌙":
-  st.write(
-      "- 하루를 마무리할 시간입니다. 오늘 세운 공부 목표를 점검하고 편안한"
-      " 휴식을 취하세요."
-  )
-else:
-  st.write(
-      "- 🛌 수면 준비 시간입니다. 스마트폰 화면 밝기를 낮추고 숙면을 위한"
-      " 환경을 만들어주세요."
-  )
+# 텍스트 기반 좌석 배치도 시각화
+seat_layout = f"""
+```text
+[ 문 (Door) ] 🚪  <--- 📌 [가장 추천: {position}]
+---------------------------------
+💺 좌석  💺 좌석  💺 좌석  💺 좌석
+---------------------------------
+       [ 통로 / 서 있는 공간 ]
+---------------------------------
+💺 좌석  💺 좌석  💺 좌석  💺 좌석
+---------------------------------
+[ 문 (Door) ] 🚪
