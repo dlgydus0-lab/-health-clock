@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # 1. 페이지 설정 (모바일 최적화 및 타이틀)
 st.set_page_config(
@@ -60,8 +60,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 실시간 시간 가져오기
-now = datetime.now()
+# 한국 표준시(KST, UTC+9) 기준으로 실시간 시간 가져오기
+kst = timezone(timedelta(hours=9))
+now = datetime.now(kst)
 current_hour = now.hour
 time_display = now.strftime("%Y년 %m월 %d일 %H:%M")
 
@@ -83,7 +84,7 @@ with col1:
 with col2:
     direction_choice = st.selectbox("운행 방향", ["상행 (청량리·광운대 방면)", "하행 (신창 방면)"])
 
-# 1호선 주요 거점역 리스트 (옵션 B 적용)
+# 1호선 주요 거점역 리스트
 if line_choice == "1호선":
     station_list = [
         "신창역", "온양온천역", "배방역", "탕정역", 
@@ -137,7 +138,7 @@ def get_recommendation(boarding, drop, hour):
 car, position, star_rating, seat_status, reason_list = get_recommendation(boarding_station, drop_station, current_hour)
 
 # 5. 결과 시각화 (출발->도착 및 카드 형태)
-st.markdown(f"### 🎯 **{boarding_station} ➔ {drop_station}**착석 가이드")
+st.markdown(f"### 🎯 **{boarding_station} ➔ {drop_station}** 착석 가이드")
 
 st.markdown(f"""
     <div class="card">
@@ -150,7 +151,7 @@ st.markdown(f"""
 
 # 6. 직관적인 지하철 좌석 배치 시각화
 st.markdown("### 💺 지하철 칸 내부 추천 위치")
-st.markdown(f"<p style='font-size:13px; color:#555;'>💡 아래 배치도에서 <span style='color:#0052A4; font-weight:bold;'>📍 [추천 위치]</span>로 표시된 자리에 서 있는 것이 가장 유리합니다.</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='font-size:13px; color:#555;'>💡 아래 배치도에서 <span style='color:#0052A4; font-weight:bold;'>📍 [추천 위치]</span>로 표시된 자리에 서 있는 것이 유리합니다.</p>", unsafe_allow_html=True)
 
 seat_layout_html = f"""
 <div class="seat-box">
