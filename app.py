@@ -57,23 +57,30 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 3. 사용자 입력 섹션 (컴팩트하게 배치)
+# 3. 사용자 입력 섹션 (노선 선택에 따른 역 목록 동적 변경)
 col1, col2 = st.columns(2)
 with col1:
-    line_choice = st.selectbox("노선 선택", ["2호선 (순환)", "1호선", "3호선", "4호선"])
+    line_choice = st.selectbox("노선 선택", ["1호선", "2호선 (순환)", "3호선", "4호선"])
 with col2:
-    direction_choice = st.selectbox("방향 선택", ["내선순환 / 상행", "외선순환 / 하행"])
+    direction_choice = st.selectbox("방향 선택", ["상행 / 청량리·광운대 방면", "하행 / 신창 방면"])
 
-station_choice = st.selectbox(
-    "현재 탑승할 역", 
-    ["강남역", "역삼역", "선릉역", "교대역", "사당역", "서울역", "홍대입구역", "신도림역"]
-)
+# 선택한 노선에 따른 탑승역 리스트 분기
+if line_choice == "1호선":
+    station_list = [
+        "신창역", "온양온천역", "배방역", "탕정역", 
+        "아산역", "쌍용역", "봉명역", "천안역"
+    ]
+else:
+    station_list = ["강남역", "역삼역", "선릉역", "교대역", "사당역", "서울역", "홍대입구역", "신도림역"]
+
+station_choice = st.selectbox("현재 탑승할 역", station_list)
 
 st.markdown("---")
 
 # 4. 확률 및 추천 계산 로직 (과제용 예시 데이터)
 def get_recommendation(station):
-    if station in ["강남역", "교대역", "홍대입구역", "신도림역"]:
+    # 1호선 주요 역(예: 천안역, 아산역 등)에 따른 맞춤형 시나리오
+    if station in ["천안역", "아산역", "온양온천역", "강남역", "교대역", "홍대입구역", "신도림역"]:
         best_car = "4호차"
         best_pos = "출입문 바로 앞 (오른쪽 문)"
         stars = "★★★★★"
@@ -83,13 +90,13 @@ def get_recommendation(station):
             "좌석이 비었을 때 곧바로 이동하기 편리한 통로 인근 위치입니다.",
             "승객의 이동이 비교적 많아 좌석 회전율이 높은 구역입니다."
         ]
-    elif station in ["역삼역", "선릉역"]:
+    elif station in ["신창역", "배방역", "탕정역", "역삼역", "선릉역"]:
         best_car = "7호차"
         best_pos = "출입문 중앙"
         stars = "★★★★☆"
         status = "높음"
         reasons = [
-            "주변 출퇴근 인구의 하차 패턴이 뚜렷한 중간 칸 위치입니다.",
+            "주변 이용객의 하차 패턴이 뚜렷한 중간 칸 위치입니다.",
             "문과 문 사이의 좌석 비움 확률을 고려한 배치입니다."
         ]
     else:
